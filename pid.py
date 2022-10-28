@@ -47,11 +47,12 @@ class PID:
         self.pol_sys = ct.tf(self.pol[0],self.pol[1])
     def pz_map_plot(self):
         x,y = ct.pzmap(self.pol_sys)
-        plt.plot(x,y,label = "pzmap")
+        print(x,y)
+        plt.plot(x,label = "pzmap")
         plt.xlabel("Eixo Real")
         plt.ylabel("Eixo imaginário")
         plt.legend()
         plt.grid()
-        plt.imshow()
+        plt.show()
     def lgr_plot(self):
         pass
