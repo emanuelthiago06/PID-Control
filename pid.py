@@ -2,14 +2,13 @@ from ast import literal_eval
 import control as ct
 import matplotlib.pyplot as plt
 class PID:
-    def __init__ (self,pol,kp,input,amp,sys_gain):
-        self.pol = pol
+    def __init__ (self,pol_num,pol_den,kp,input,amp,sys_gain):
+        self.pol = [pol_num,pol_den]
         self.gain = sys_gain
         self.input_amplitude = amp 
-        self.pol = pol
         self.kp = kp
         self.input = input
-        self.pol_sys = ct.tf(pol)
+        self.pol_sys = ct.tf(pol_num,pol_den)
     def test_paremeters(self):
         try:
             self.kp = literal_eval(self.kp)
@@ -21,15 +20,16 @@ class PID:
         pass
     def get_step_response(self):
         x = ct.tf([1],[1],1)
-        y = ct.tf([self.pol[0]],[self.pol[1]],1)
-        Y_response = ct.step_response(y)
-        X_response = ct.step_response(x)
-        plt.plot(X_response,Y_response,label = "output")
-        plt.plot(X_response,x, label = "input")
+        y = self.pol_sys
+        Y_response,X = ct.step_response(y)
+        X_response,X_2 = ct.step_response(x)
+        plt.plot(X,Y_response,label = "output")
+        plt.plot(X_2,X_response, label = "input")
         plt.xlabel("Amplitude")
         plt.ylabel("Tempo")
         plt.legend()
         plt.grid()
+        plt.show()
 
     def get_impulse_response(self,**kwargs):
         x = kwargs["entrada"]
@@ -44,7 +44,7 @@ class PID:
     def close_system(self):
         self.pol_sys = ct.feedback(self.pol_sys)
     def open_system(self):
-        self.pol_sys = ct.tf(self.pol)
+        self.pol_sys = ct.tf(self.pol[0],self.pol[1])
     def pz_map_plot(self):
         x,y = ct.pzmap(self.pol_sys)
         plt.plot(x,y,label = "pzmap")
