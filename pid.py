@@ -9,6 +9,7 @@ class PID:
         self.kp = kp
         self.input = input
         self.pol_sys = ct.tf(pol_num,pol_den)
+    
     def test_paremeters(self):
         try:
             self.kp = literal_eval(self.kp)
@@ -16,8 +17,10 @@ class PID:
             raise SystemError("O valor de kp")
         if input != "degrau" or input != "impulso":
             raise SystemError("Tipo de entrada não suportado")
+    
     def get_pid(self):
         pass
+    
     def get_step_response(self):
         x = ct.tf([1],[1],1)
         y = self.pol_sys
@@ -41,10 +44,13 @@ class PID:
         plt.ylabel("Tempo")
         plt.legend()
         plt.grid()
+    
     def close_system(self):
         self.pol_sys = ct.feedback(self.pol_sys)
+    
     def open_system(self):
         self.pol_sys = ct.tf(self.pol[0],self.pol[1])
+    
     def pz_map_plot(self):
         x,y = ct.pzmap(self.pol_sys)
         print(x,y)
@@ -54,5 +60,16 @@ class PID:
         plt.legend()
         plt.grid()
         plt.show()
+    
     def lgr_plot(self):
+        y,x = ct.root_locus(self.pol_sys)
+        print(y)
+        print(x == y)
+        plt.xlabel("Eixo Real")
+        plt.ylabel("Eixo imaginário")
+        plt.legend()
+        plt.grid()
+        plt.show()
+    
+    def pid_support(self):
         pass
