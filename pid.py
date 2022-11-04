@@ -1,12 +1,14 @@
 from ast import literal_eval
 import control as ct
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.integrate import odeint
 class PID:
     def __init__ (self,pol_num,pol_den,kp,input,amp,sys_gain):
         self.pol = [pol_num,pol_den]
         self.gain = sys_gain
-        self.input_amplitude = amp 
-        self.kp = kp
+        self.input_amplitude = amp
+        self.kp = kp    
         self.input = input
         self.pol_sys = ct.tf(pol_num,pol_den)
     
