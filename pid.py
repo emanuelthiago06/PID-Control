@@ -3,14 +3,20 @@ import control as ct
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import odeint
+import time
 class PID:
-    def __init__ (self,pol_num,pol_den,kp,input,amp,sys_gain):
+    def __init__ (self,pol_num,pol_den,kp,input,input_amp,amp,sys_gain,kp,ki,kd):
+        self.set_point = 0
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
         self.pol = [pol_num,pol_den]
         self.gain = sys_gain
         self.input_amplitude = amp
         self.kp = kp    
         self.input = input
         self.pol_sys = ct.tf(pol_num,pol_den)
+        self.dt = 0
     
     def test_paremeters(self):
         try:
@@ -73,5 +79,29 @@ class PID:
         plt.grid()
         plt.show()
     
-    def pid_support(self):
-        pass
+
+## Conta paralelo : u(t) = Kp*e(t)+Ki*integral(e(t)*dt)+kd*de/dt
+
+    def update_pid(self):
+        output = 0
+        err = self.input_amplitude - self.last_output
+        time = time.time() if time is None else time
+        delta_t = time - self.last_time
+        delta_err = err - self.last_err
+        self.P = self.kp * err
+        self.I += err * delta_t
+        self.D = delta_err/delta_t
+        self.output = self.P + (self.ki*self.I) + (self.kd*self.D)
+        self.last_output = self.output
+        self.last_time = time
+        self.last_err = err
+
+    def calculate_pid(self,max_range):
+        for i in range(1,max_range):
+            self.update_pid()
+            if i>15:
+                self.input_amplitude = 2
+            time.sleep(0.03)
+            self.output_values.append(self.output)
+            self.set_point_values.append(self.input_amplitude)
+            self.time_values.append(i)
