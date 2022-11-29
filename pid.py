@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import odeint
 import time
+import sys
 class PID:
     def __init__ (self,pol_num,pol_den,kp,input,input_amp,amp,sys_gain,kp,ki,kd):
         self.set_point = 0
@@ -88,13 +89,19 @@ class PID:
         time = time.time() if time is None else time
         delta_t = time - self.last_time
         delta_err = err - self.last_err
+        value = func.test(delta_t,delta_err)
+        calcule_value = func.calcule(delta_err,delta_t,time,err,self.P,self.I,self.D) 
         self.P = self.kp * err
         self.I += err * delta_t
         self.D = delta_err/delta_t
-        self.output = self.P + (self.ki*self.I) + (self.kd*self.D)
+        if self.output:
+            self.output = self.P + (self.ki*self.I) + (self.kd*self.D)
+        else:
+            raise SystemError("Unknow error")    
         self.last_output = self.output
         self.last_time = time
         self.last_err = err
+        return [calcule_value,self.output]
 
     def calculate_pid(self,max_range):
         for i in range(1,max_range):
