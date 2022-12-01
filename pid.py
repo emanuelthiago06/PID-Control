@@ -1,114 +1,85 @@
 from ast import literal_eval
-import control as ct
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import odeint
 import time
 import sys
+
 class PID:
-    def __init__ (self,pol_num,pol_den,kp,input,input_amp,amp,sys_gain,kp,ki,kd):
-        self.set_point = 0
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.pol = [pol_num,pol_den]
-        self.gain = sys_gain
-        self.input_amplitude = amp
-        self.kp = kp    
-        self.input = input
-        self.pol_sys = ct.tf(pol_num,pol_den)
-        self.dt = 0
-    
-    def test_paremeters(self):
-        try:
-            self.kp = literal_eval(self.kp)
-        except:
-            raise SystemError("O valor de kp")
-        if input != "degrau" or input != "impulso":
-            raise SystemError("Tipo de entrada não suportado")
-    
-    def get_pid(self):
-        pass
-    
-    def get_step_response(self):
-        x = ct.tf([1],[1],1)
-        y = self.pol_sys
-        Y_response,X = ct.step_response(y)
-        X_response,X_2 = ct.step_response(x)
-        plt.plot(X,Y_response,label = "output")
-        plt.plot(X_2,X_response, label = "input")
-        plt.xlabel("Amplitude")
-        plt.ylabel("Tempo")
-        plt.legend()
-        plt.grid()
-        plt.show()
-
-    def get_impulse_response(self,**kwargs):
-        x = kwargs["entrada"]
-        y =  kwargs["ft"]
-        X_response,Y_response = ct.impulse_response(x,y)
-        plt.plot(X_response,Y_response,label = "output")
-        plt.plot(X_response,x, label = "input")
-        plt.xlabel("Amplitude")
-        plt.ylabel("Tempo")
-        plt.legend()
-        plt.grid()
-    
-    def close_system(self):
-        self.pol_sys = ct.feedback(self.pol_sys)
-    
-    def open_system(self):
-        self.pol_sys = ct.tf(self.pol[0],self.pol[1])
-    
-    def pz_map_plot(self):
-        x,y = ct.pzmap(self.pol_sys)
-        print(x,y)
-        plt.plot(x,label = "pzmap")
-        plt.xlabel("Eixo Real")
-        plt.ylabel("Eixo imaginário")
-        plt.legend()
-        plt.grid()
-        plt.show()
-    
-    def lgr_plot(self):
-        y,x = ct.root_locus(self.pol_sys)
-        print(y)
-        print(x == y)
-        plt.xlabel("Eixo Real")
-        plt.ylabel("Eixo imaginário")
-        plt.legend()
-        plt.grid()
-        plt.show()
-    
-
+    def __init__ (self,**kwargs):
+        self.set_point = kwargs["set_point"]
+        self.kp = kwargs["kp"]
+        self.ki = kwargs["ki"]
+        self.kd = kwargs["kd"]
+        self.windup_value = 25
+        self.dt = 0 ## tempo inicial
+        self.sample_time = 10**-2 if "sample_time" not in kwargs else kwargs["sample_time"]
+        self.I = 0
+        self.P = 0
+        self.D = 0
+        self.x_axis = [0]
+        ## Variables to use on the feedback system
+        self.old_err = 0
+        self.initial_time = time.time()
+        self.old_time = self.initial_time
+        self.old_output = 0
+        self.system_counts = 0
+        self.control_list = []
 ## Conta paralelo : u(t) = Kp*e(t)+Ki*integral(e(t)*dt)+kd*de/dt
 
-    def update_pid(self):
-        output = 0
-        err = self.input_amplitude - self.last_output
-        time = time.time() if time is None else time
-        delta_t = time - self.last_time
-        delta_err = err - self.last_err
-        value = func.test(delta_t,delta_err)
-        calcule_value = func.calcule(delta_err,delta_t,time,err,self.P,self.I,self.D) 
-        self.P = self.kp * err
-        self.I += err * delta_t
-        self.D = delta_err/delta_t
-        if self.output:
-            self.output = self.P + (self.ki*self.I) + (self.kd*self.D)
-        else:
-            raise SystemError("Unknow error")    
-        self.last_output = self.output
-        self.last_time = time
-        self.last_err = err
-        return [calcule_value,self.output]
 
-    def calculate_pid(self,max_range):
+    def update_pid(self,fd = 0):
+        time_t = time.time()
+        delta_t = time_t - self.old_time if time_t-self.old_time else 10**-8
+        if self.sample_time <= delta_t:  ## Dont take a sample if the delta_t is lower than sample time, otherwise this can cause problems on the sampling and also on the convergence time
+            err = self.set_point - fd
+            delta_err = err - self.old_err
+            self.P = self.kp * err
+            self.I += self.ki*err * delta_t
+            self.I = self.check_windup(self.I)
+            self.D = delta_err/delta_t
+            output = self.P + (self.I) + (self.kd*self.D)
+            self.old_time = time_t
+            self.old_err = err
+            self.old_output = output
+            return output
+        else:
+            return self.old_output ## Return the old output if delta_t is lower (experimental phase)
+
+    def check_windup(self,value):
+        if abs(value) > self.windup_value:
+            value = abs(value)/value*self.windup_value
+        return value
+## IGNORE THIS FUNCTION, IT WILL BE IMPLEMENTED ON THE MAIN FILE FOR NOW
+
+
+    def calcule_pid(self,max_range):
+        control = 0
+        self.control_list.append(control)
         for i in range(1,max_range):
-            self.update_pid()
-            if i>15:
-                self.input_amplitude = 2
+            control += self.update_pid(control) + 1/i
+            print(control)
             time.sleep(0.03)
-            self.output_values.append(self.output)
-            self.set_point_values.append(self.input_amplitude)
-            self.time_values.append(i)
+            self.control_list.append(control)
+            self.x_axis.append(i)
+    def plot_graph(self):
+        plt.plot(self.x_axis,self.control_list,color = 'r',label = 'simulado')
+        set_point_list = []
+        for _ in self.control_list:
+            if len(set_point_list) == 0:
+                set_point_list.append(0)
+            else:    
+                set_point_list.append(self.set_point)
+        plt.plot(self.x_axis,set_point_list,color = 'b',label = 'ideal')
+        plt.show()
+    def run(self,max_range):
+        self.calcule_pid(max_range)
+        self.plot_graph()
+
+
+def test_pid():
+    pid = PID(kp = 1.2,kd = 0.01,ki =1,set_point = 2)
+    pid.run(100)
+
+if __name__ == "__main__":
+    test_pid()
