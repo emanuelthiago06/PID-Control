@@ -25,12 +25,15 @@ class PID:
         self.old_output = 0
         self.system_counts = 0
         self.control_list = []
-## Conta paralelo : u(t) = Kp*e(t)+Ki*integral(e(t)*dt)+kd*de/dt
+        self.total_time = 0
 
 
     def update_pid(self,fd = 0):
+## Conta paralelo : u(t) = Kp*e(t)+Ki*integral(e(t)*dt)+kd*de/dt
+
         time_t = time.time()
         delta_t = time_t - self.old_time if time_t-self.old_time else 10**-8
+        self.total_time+=delta_t
         if self.sample_time <= delta_t:  ## Dont take a sample if the delta_t is lower than sample time, otherwise this can cause problems on the sampling and also on the convergence time
             err = self.set_point - fd
             delta_err = err - self.old_err
@@ -50,7 +53,6 @@ class PID:
         if abs(value) > self.windup_value:
             value = abs(value)/value*self.windup_value
         return value
-## IGNORE THIS FUNCTION, IT WILL BE IMPLEMENTED ON THE MAIN FILE FOR NOW
 
 
     def calcule_pid(self,max_range):
@@ -64,6 +66,7 @@ class PID:
             self.x_axis.append(i)
     def plot_graph(self):
         plt.plot(self.x_axis,self.control_list,color = 'r',label = 'simulado')
+        plt.legend(loc='best')
         set_point_list = []
         for _ in self.control_list:
             if len(set_point_list) == 0:
@@ -71,6 +74,13 @@ class PID:
             else:    
                 set_point_list.append(self.set_point)
         plt.plot(self.x_axis,set_point_list,color = 'b',label = 'ideal')
+        plt.legend(loc='best')
+        #improving plot settings
+        xmin, xmax = plt. xlim()
+        ymin, ymax = plt. ylim()
+        scale_factor = 1.5
+        plt. xlim(xmin * 1, xmax * 1)
+        plt. ylim(ymin * scale_factor, ymax * scale_factor)
         plt.show()
     def run(self,max_range):
         self.calcule_pid(max_range)
@@ -80,6 +90,7 @@ class PID:
 def test_pid():
     pid = PID(kp = 1.2,kd = 0.01,ki =1,set_point = 2)
     pid.run(100)
+    print(pid.total_time)
 
 if __name__ == "__main__":
     test_pid()
